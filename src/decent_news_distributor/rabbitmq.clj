@@ -8,6 +8,7 @@
             [clojure.edn :as edn]
             [clojure.core.async :as a]
             [taoensso.timbre :as log]
+            [clojure.data.json :as json]
             [environ.core :refer [env]]))
 
 
@@ -56,22 +57,31 @@
    (lcore/close (:connection rabbitmq)))
   {})
 
+(defn publish
+  [async-chan message]
+  (log/debug "Publishing message.")
+  (a/>!! async-chan message))
+
+(defn strip-message
+  [next-fn]
+  (fn [message]
+    (next-fn {:topic (-> message :metadata :routing-key)
+              :body  (-> message :payload)})))
+
 (defn wrap-payload-to-edn [next-fn]
   (fn [message]
     (next-fn (assoc message :bytes-payload (:payload message)
-                            :payload (edn/read-string (String. (:payload message)))))))
-
-(defn wrap-into-map [next-fn]
-  (fn [channel metadata ^bytes payload]
-    (next-fn {:channel channel
-              :metadata metadata
-              :payload payload})))
+                            :payload (json/read-str (String. (:payload message)) :key-fn keyword)))))
 
 (defn message-handler
   [async-chan channel metadata ^bytes payload]
-  (let [executor (-> (partial a/>!! async-chan)
-                     wrap-payload-to-edn
-                     wrap-into-map)]
-    (executor channel metadata payload)))
+  (log/debug "Message received.")
+  (let [publish (partial publish async-chan)
+        executor (-> publish
+                     strip-message
+                     wrap-payload-to-edn)]
+    (executor {:channel channel 
+               :metadata metadata 
+               :payload payload})))
 
 (mount/defstate rabbitmq :start (start config message-handler) :stop  (stop rabbitmq))
