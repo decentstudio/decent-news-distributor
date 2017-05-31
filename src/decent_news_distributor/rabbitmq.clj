@@ -7,7 +7,8 @@
             [mount.core :as mount]
             [clojure.edn :as edn]
             [clojure.core.async :as a]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [environ.core :refer [env]]))
 
 
 (def config {:queue {:opt {:declare {:durable true
@@ -17,11 +18,11 @@
                            :subscribe {:auto-ack true}}
                      :name (str (java.util.UUID/randomUUID))
                      :exchange "amq.topic"}
-             :broker {:host "localhost"
-                      :port 5672
-                      :user "guest"
-                      :pass "guest"
-                      :vhost "/"}})
+             :broker {:host (env :rabbitmq-host)
+                      :port (Integer/parseInt (env :rabbitmq-port))
+                      :user (env :rabbitmq-user)
+                      :pass (env :rabbitmq-pass)
+                      :vhost (env :rabbitmq-vhost)}})
 
 (defn start
   [config handler-fn]

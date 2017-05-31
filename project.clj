@@ -14,7 +14,9 @@
                  [ring/ring-core "1.6.1"]
                  [ring/ring-jetty-adapter "1.6.1"]
                  [bidi "2.1.1"]
-                 [org.clojure/data.json "0.2.6"]]
+                 [org.clojure/data.json "0.2.6"]
+                 [environ "1.1.0"]]
+  :plugins [[lein-environ "1.1.0"]]
   :main ^:skip-aot decent-news-distributor.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}
