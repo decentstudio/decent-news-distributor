@@ -9,7 +9,9 @@
                  [com.taoensso/timbre "4.10.0"]
                  [com.novemberain/langohr "4.0.0"]
                  [metrics-clojure "2.9.0"]
-                 [org.clojure/core.async "0.3.443"]]
+                 [org.clojure/core.async "0.3.443"]
+                 [org.clojure/core.cache "0.6.5"]
+                 [clj-time "0.13.0"]]
   :main ^:skip-aot decent-news-distributor.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}
