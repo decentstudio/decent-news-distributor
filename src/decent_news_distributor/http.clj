@@ -1,6 +1,6 @@
 (ns decent-news-distributor.http
   (:require [ring.adapter.jetty :as jetty]
-            [decent-news-distributor.cache :as cache]
+            [decent-news-distributor.cache :refer [cache]]
             [mount.core :as mount]
             [taoensso.timbre :as log]
             [bidi.ring :refer (make-handler)]
@@ -9,10 +9,11 @@
 
 (defn news-handler
   [request]
+  (log/debug "Retrieving news.")
   (let [news (map (fn [[timestamp item]] 
                     {:timestamp timestamp
-                     :news item}) 
-                  @(-> cache/message-cache :cache-ttl))]
+                     :item item}) 
+                  @(-> cache :cache-ttl))]
     (-> (res/response (json/write-str news :key-fn name))
         (res/content-type "application/json"))))
 

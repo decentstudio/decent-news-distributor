@@ -1,4 +1,4 @@
-(ns decent-news-distributor.rabbitmq
+(ns decent-news-distributor.messaging
   (:require [langohr.core :as lcore]
             [langohr.channel :as lchan]
             [langohr.basic :as lbasic]
@@ -27,7 +27,7 @@
 
 (defn start
   [config handler-fn]
-  (log/info "Starting rabbitmq subsystem...")
+  (log/info "Starting messaging subsystem...")
   (let [queue      (:queue config)
         broker     (:broker config)
         connection (lcore/connect broker)
@@ -35,7 +35,7 @@
         _          (lqueue/declare chan (:name queue) (-> queue :opt :declare))
         _          (lqueue/bind chan (:name queue) (:exchange queue) (-> queue :opt :bind))
         async-chan (a/chan)
-        async-pub (a/pub async-chan (fn [m] "incoming.message.news"))
+        async-pub (a/pub async-chan (fn [m] :message.received))
         consumer (lconsumers/subscribe chan
                                        (:name queue)
                                        (partial handler-fn async-chan)
@@ -49,20 +49,20 @@
     :consumer consumer}))
 
 (defn stop
-  [rabbitmq]
-  (when rabbitmq
-   (lbasic/cancel (:chan rabbitmq) (:consumer rabbitmq))
-   (a/close! (:async-chan rabbitmq))
-   (lcore/close (:chan rabbitmq))
-   (lcore/close (:connection rabbitmq)))
-  {})
+  [messaging]
+  (when messaging
+    (let [{:keys [chan consumer async-chan connection]} messaging
+          _ (lbasic/cancel chan consumer)
+          _ (a/close! async-chan)
+          _ (lcore/close chan)
+          _ (lcore/close connection)])))
 
 (defn publish
   [async-chan message]
-  (log/debug "Publishing message.")
-  (a/>!! async-chan message))
+  (a/>!! async-chan message) 
+  (log/debug "Published message."))
 
-(defn strip-message
+(defn wrap-strip-message
   [next-fn]
   (fn [message]
     (next-fn {:topic (-> message :metadata :routing-key)
@@ -78,10 +78,11 @@
   (log/debug "Message received.")
   (let [publish (partial publish async-chan)
         executor (-> publish
-                     strip-message
-                     wrap-payload-to-edn)]
-    (executor {:channel channel 
-               :metadata metadata 
-               :payload payload})))
+                     wrap-strip-message
+                     wrap-payload-to-edn)
+        message  {:channel channel 
+                  :metadata metadata 
+                  :payload payload}
+        _ (executor message)]))
 
-(mount/defstate rabbitmq :start (start config message-handler) :stop  (stop rabbitmq))
+(mount/defstate messaging :start (start config message-handler) :stop  (stop messaging))
