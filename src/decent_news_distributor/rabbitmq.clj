@@ -33,7 +33,7 @@
         _          (lqueue/declare chan (:name queue) (-> queue :opt :declare))
         _          (lqueue/bind chan (:name queue) (:exchange queue) (-> queue :opt :bind))
         async-chan (a/chan)
-        async-pub (a/pub async-chan #("incoming.message.news"))
+        async-pub (a/pub async-chan (fn [m] "incoming.message.news"))
         consumer (lconsumers/subscribe chan
                                        (:name queue)
                                        (partial handler-fn async-chan)

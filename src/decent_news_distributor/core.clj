@@ -1,5 +1,5 @@
 (ns decent-news-distributor.core
-  (:require [decent-news-distributor.cache :as cache]
+  (:require [decent-news-distributor.http :as http]
             [mount.core :as mount])
   (:gen-class))
 
