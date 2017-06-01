@@ -18,8 +18,10 @@
         cache-ttl (atom (cache/ttl-cache-factory {} :ttl ttl))]
     (a/go-loop [message (a/<! async-chan)]
       (when message
-        (log/debug "Adding message to cache.")
-        (swap! cache-ttl assoc (str (t/now)) (:body message))
+        (let [timestamp (:timestamp message)]
+         (swap! cache-ttl assoc timestamp 
+                                (assoc message :timestamp (str timestamp)))
+         (log/debug "Added message to cache."))
         (recur (a/<! async-chan))))
     {:async-chan async-chan
      :async-sub async-sub

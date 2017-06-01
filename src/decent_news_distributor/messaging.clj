@@ -9,7 +9,9 @@
             [clojure.core.async :as a]
             [taoensso.timbre :as log]
             [clojure.data.json :as json]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [clj-time.core :as t]
+            [clj-time.coerce :as c]))
 
 
 (def config {:queue {:opt {:declare {:durable true
@@ -62,7 +64,29 @@
   (a/>!! async-chan message) 
   (log/debug "Published message."))
 
-(defn wrap-strip-message
+
+(defmulti normalize-message 
+  (fn [message] (keyword (:topic message))))
+
+(defmethod normalize-message :slack.event.message 
+  [message]
+  (let [{:keys [body]} message
+        {:keys [team_id event_time event_id event]} body
+        {:keys [text user channel ts event_ts]} event]
+    {:team_id team_id
+     :user_id user
+     :message text
+     :channel channel
+     :timestamp event_ts}))
+
+(defn wrap-normalize-message [next-fn]
+  (fn [message]
+    (next-fn {:body (normalize-message message)
+              :type (:topic message)
+              :id (str (java.util.UUID/randomUUID))
+              :timestamp (t/now)})))
+
+(defn wrap-internalize-message
   [next-fn]
   (fn [message]
     (next-fn {:topic (-> message :metadata :routing-key)
@@ -78,7 +102,8 @@
   (log/debug "Message received.")
   (let [publish (partial publish async-chan)
         executor (-> publish
-                     wrap-strip-message
+                     wrap-normalize-message
+                     wrap-internalize-message
                      wrap-payload-to-edn)
         message  {:channel channel 
                   :metadata metadata 
