@@ -22,7 +22,7 @@
   (make-handler ["/api/" {"news" news-handler}]))
 
 (def app (-> handler
-             (wrap-cors :access-control-allow-origin [#"\*"]
+             (wrap-cors :access-control-allow-origin [#".*"]
                         :access-control-allow-methods [:get :put :post :delete])))
 
 (defn start
