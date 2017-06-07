@@ -9,6 +9,16 @@
             [clojure.data.json :as json]
             [environ.core :refer [env]]))
 
+(defn not-found-handler
+  [request]
+  (let [status 404
+        error "Resource Not Found"]
+    (-> (res/response
+          (json/write-str {:status status
+                           :error error}
+                          :key-fn name))
+        (res/status 404)
+        (res/content-type "application/json"))))
 
 (defn news-handler
   [request]
@@ -19,7 +29,8 @@
         (res/content-type "application/json"))))
 
 (def handler
-  (make-handler ["/api/" {"news" news-handler}]))
+  (make-handler ["/" [["api/news" news-handler]
+                      [true not-found-handler]]]))
 
 (def app (-> handler
              (wrap-cors :access-control-allow-origin [#".*"]
@@ -28,7 +39,7 @@
 (defn start
   [handler]
   (log/info "Starting http subsystem...")
-  (let [jetty-server (jetty/run-jetty app {:port 80})]
+  (let [jetty-server (jetty/run-jetty app 80)]
     {:jetty-server jetty-server}))
 
 (defn stop
