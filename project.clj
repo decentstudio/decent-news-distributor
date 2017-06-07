@@ -1,4 +1,4 @@
-(defproject decent-news-distributor "0.1.0-SNAPSHOT"
+(defproject decent-news-distributor "0.1.1"
   :description "Distributes news to clients."
   :url "http://decentstudio.com"
   :license {:name "N/A"
@@ -17,7 +17,7 @@
                  [org.clojure/data.json "0.2.6"]
                  [environ "1.1.0"]
                  [ring-cors "0.1.10"]]
-                 
+
   :plugins [[lein-environ "1.1.0"]]
   :main ^:skip-aot decent-news-distributor.core
   :target-path "target/%s"
