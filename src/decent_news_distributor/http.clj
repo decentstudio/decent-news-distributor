@@ -9,24 +9,30 @@
             [clojure.data.json :as json]
             [environ.core :refer [env]]))
 
+(defn to-json
+  [x]
+  (json/write-str x :key-fn name))
+
+(defn content-type-json
+  [response]
+  (res/content-type response "application/json"))
+
 (defn not-found-handler
   [request]
   (let [status 404
-        error "Resource Not Found"]
-    (-> (res/response
-          (json/write-str {:status status
-                           :error error}
-                          :key-fn name))
-        (res/status 404)
-        (res/content-type "application/json"))))
+        error "Resource Not Found"
+        response {:status status :error error}]
+    (-> (res/response (to-json response))
+        (res/status status)
+        (content-type-json))))
 
 (defn news-handler
   [request]
   (log/debug "Retrieving news.")
   (let [news (map (fn [[timestamp item]] item)
                   @(-> cache :cache-ttl))]
-    (-> (res/response (json/write-str news :key-fn name))
-        (res/content-type "application/json"))))
+    (-> (res/response (to-json news))
+        (content-type-json))))
 
 (def handler
   (make-handler ["/" [["api/news" news-handler]
@@ -39,7 +45,7 @@
 (defn start
   [handler]
   (log/info "Starting http subsystem...")
-  (let [jetty-server (jetty/run-jetty app 80)]
+  (let [jetty-server (jetty/run-jetty app {:port 80})]
     {:jetty-server jetty-server}))
 
 (defn stop
