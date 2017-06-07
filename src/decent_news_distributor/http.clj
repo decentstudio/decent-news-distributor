@@ -7,7 +7,8 @@
             [ring.util.response :as res]
             [ring.middleware.cors :refer [wrap-cors]]
             [clojure.data.json :as json]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [ring.middleware.params :as params]))
 
 (defn to-json
   [x]
@@ -38,7 +39,18 @@
   (make-handler ["/" [["api/news" news-handler]
                       [true not-found-handler]]]))
 
+(defn wrap-check-access-token [next-fn]
+  (let [access-token "ea2d7d06-7190-41d5-b16e-ad2dce0f86fc"]
+    (fn [request]
+      (if-not (= access-token (get (:query-params request) "access_token"))
+        (-> (res/response (to-json {:status 400 :error "Not Authorized"}))
+            (res/status 400)
+            (content-type-json))
+        (next-fn request)))))
+
 (def app (-> handler
+             (wrap-check-access-token)
+             (params/wrap-params)
              (wrap-cors :access-control-allow-origin [#".*"]
                         :access-control-allow-methods [:get :put :post :delete])))
 
