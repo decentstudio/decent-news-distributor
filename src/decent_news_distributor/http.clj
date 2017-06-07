@@ -7,21 +7,55 @@
             [ring.util.response :as res]
             [ring.middleware.cors :refer [wrap-cors]]
             [clojure.data.json :as json]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [ring.middleware.params :as params]))
 
+(defn to-json
+  [x]
+  (json/write-str x :key-fn name))
+
+(defn content-type-json
+  [response]
+  (res/content-type response "application/json"))
+
+(defn not-found-handler
+  [request]
+  (let [status 404
+        error "Resource Not Found"
+        response {:status status :error error}]
+    (-> (res/response (to-json response))
+        (res/status status)
+        (content-type-json))))
 
 (defn news-handler
   [request]
   (log/debug "Retrieving news.")
-  (let [news (map (fn [[timestamp item]] item)
-                  @(-> cache :cache-ttl))]
-    (-> (res/response (json/write-str news :key-fn name))
-        (res/content-type "application/json"))))
+  (let [cache @(:cache-ttl cache)
+        news (->> cache
+                  (sort-by key)
+                  (map val))]
+    (-> (res/response (to-json news))
+        (content-type-json))))
 
 (def handler
-  (make-handler ["/api/" {"news" news-handler}]))
+  (make-handler ["/" [["api/news" news-handler]
+                      [true not-found-handler]]]))
+
+(defn wrap-check-access-token [next-fn]
+  (let [access-token "ea2d7d06-7190-41d5-b16e-ad2dce0f86fc"
+        status 400
+        error "Not Authorized"
+        response {:status status :error error}]
+    (fn [request]
+      (if-not (= access-token (get (:query-params request) "access_token"))
+        (-> (res/response (to-json response))
+            (res/status status)
+            (content-type-json))
+        (next-fn request)))))
 
 (def app (-> handler
+             (wrap-check-access-token)
+             (params/wrap-params)
              (wrap-cors :access-control-allow-origin [#".*"]
                         :access-control-allow-methods [:get :put :post :delete])))
 

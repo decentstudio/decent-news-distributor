@@ -8,10 +8,10 @@
 2. Create a `.env` file based on the `.env.example` file
 
 3. Build the container:
-   - `docker build -t decent-news-distributor:1.0 .`
+   - `docker build -t decentstudio/decent-news-distributor:latest .`
 
 4. Run the container:
-   - `docker run --name=decent-news-distributor -d -p 80:80 --env-file=.env decent-news-distributor:1.0`
+   - `docker run --name=decent-news-distributor -d -p 8080:80 --env-file=.env decentstudio/decent-news-distributor:latest`
 
 ## Environment Variables Setup
 
