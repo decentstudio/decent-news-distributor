@@ -40,11 +40,14 @@
                       [true not-found-handler]]]))
 
 (defn wrap-check-access-token [next-fn]
-  (let [access-token "ea2d7d06-7190-41d5-b16e-ad2dce0f86fc"]
+  (let [access-token "ea2d7d06-7190-41d5-b16e-ad2dce0f86fc"
+        status 400
+        error "Not Authorized"
+        response {:status status :error error}]
     (fn [request]
       (if-not (= access-token (get (:query-params request) "access_token"))
-        (-> (res/response (to-json {:status 400 :error "Not Authorized"}))
-            (res/status 400)
+        (-> (res/response (to-json response))
+            (res/status status)
             (content-type-json))
         (next-fn request)))))
 
