@@ -30,8 +30,10 @@
 (defn news-handler
   [request]
   (log/debug "Retrieving news.")
-  (let [news (map (fn [[timestamp item]] item)
-                  @(-> cache :cache-ttl))]
+  (let [cache @(:cache-ttl cache)
+        news (->> cache
+                  (sort-by key)
+                  (map val))]
     (-> (res/response (to-json news))
         (content-type-json))))
 
